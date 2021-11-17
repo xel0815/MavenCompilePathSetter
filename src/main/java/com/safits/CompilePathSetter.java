@@ -41,7 +41,6 @@ extends AbstractMojo {
     	File baseDir = this.project.getBasedir();
     	String here = baseDir.getAbsolutePath();
     	getLog().info("We are in " + here);
-    	getLog().info(this.project.getProperties().toString());
     	checkRepository();
     	if (this.rcpProductFilename == null)
     		findRcpProductFilename(baseDir);
