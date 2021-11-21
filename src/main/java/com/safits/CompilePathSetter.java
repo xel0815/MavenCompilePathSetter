@@ -59,17 +59,12 @@ extends AbstractMojo {
     	+ " -- "
     	+ compileDependency.version);
     	}
-    	getLog().info("The properties are " + this.project.getProperties());
-    	getLog().info("The local repository is " + this.settings.getLocalRepository());
-    	getLog().info("The project version is '" + this.project.getVersion() + "'");
-    	File baseDir = this.project.getBasedir();
-    	String here = baseDir.getAbsolutePath();
-    	getLog().info("We are in " + here);
 
     	for (Dependency dependency: this.compileDependencies) {
     		lookForSuitableJars(dependency);
     	}
 
+    	getLog().info("The compile dependencies are resolved as follows:");
     	StringBuilder compilePathBuilder = null;
     	for (Dependency dependency: this.compileDependencies) {
     		if (!this.dependencyMapping.containsKey(dependency))
@@ -83,6 +78,14 @@ extends AbstractMojo {
     		else
     			compilePathBuilder.append(File.pathSeparator);
     		compilePathBuilder.append(jarFile.getAbsolutePath());
+    		getLog().info("-- "
+    				+ dependency.groupId
+					+ " -- "
+					+ dependency.artifact
+					+ " -- "
+					+ dependency.version);
+    		getLog().info("   "
+    				+ jarFile.getAbsolutePath());
     	}
 
     	String compileClassPath = compilePathBuilder.toString();
@@ -99,12 +102,6 @@ extends AbstractMojo {
     /** the pattern for one explicit version of maximum three groups */
     static final Pattern oneVersionPattern = Pattern.compile(
     		"[0-9]+(\\.[0-9]+(\\.[0-9]+)?)?");
-
-    /** the pattern for a range of versions */
-    static final Pattern rangeVersionPattern = Pattern.compile(
-    		"(\\[|\\()"
-    		+ "([0-9]+(\\.[0-9]+(\\.[0-9]+)?)?)?,([0-9]+(\\.[0-9]+(\\.[0-9]+)?)?)?"
-    		+ "(\\]|\\))");
 
 	private void lookForSuitableJars(Dependency dependency)
 	throws MojoExecutionException {
