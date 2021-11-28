@@ -10,5 +10,7 @@
 	<classpathentry kind="lib" path="/devel/.maven-repository/org/apache/maven/plugin-tools/maven-plugin-annotations/3.6.1/maven-plugin-annotations-3.6.1.jar"/>
 	<classpathentry kind="lib" path="/devel/.maven-repository/org/apache/maven/maven-project/2.2.1/maven-project-2.2.1.jar"/>
 	<classpathentry kind="lib" path="/devel/.maven-repository/org/apache/maven/maven-settings/3.6.3/maven-settings-3.6.3.jar"/>
+	<classpathentry kind="lib" path="/devel/.maven-repository/org/jdom/jdom2/2.0.6/jdom2-2.0.6.jar"/>
+        <classpathentry kind="lib" path="/devel/.maven-repository/org/eclipse/swt/org.eclipse.swt.gtk.linux.x86_64/4.4/org.eclipse.swt.gtk.linux.x86_64-4.4.jar" />
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

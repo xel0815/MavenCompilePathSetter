@@ -8,6 +8,87 @@
     <packaging>maven-plugin</packaging>
     <version>1.0.0</version>
 
+    <profiles>
+        <profile>
+            <id>swt-unix</id>
+            <activation>
+                <os>
+                    <family>unix</family>
+                </os>
+            </activation>
+            <properties>
+                <swt.artifactId>org.eclipse.swt.gtk.linux.x86_64</swt.artifactId>
+                <env>linux</env>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.eclipse.platform</groupId>
+                    <artifactId>${swt.artifactId}</artifactId>
+                    <version>3.108.0</version>
+                    <optional>true</optional>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.eclipse.platform</groupId>
+                            <artifactId>org.eclipse.swt</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>swt-mac</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <swt.artifactId>org.eclipse.swt.cocoa.macosx.x86_64</swt.artifactId>
+                <env>mac</env>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.eclipse.platform</groupId>
+                    <artifactId>${swt.artifactId}</artifactId>
+                    <version>3.108.0</version>
+                    <optional>true</optional>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.eclipse.platform</groupId>
+                            <artifactId>org.eclipse.swt</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>swt-windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <swt.artifactId>org.eclipse.swt.win32.win32.x86_64</swt.artifactId>
+                <env>windows</env>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.eclipse.platform</groupId>
+                    <artifactId>${swt.artifactId}</artifactId>
+                    <version>3.108.0</version>
+                    <optional>true</optional>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.eclipse.platform</groupId>
+                            <artifactId>org.eclipse.swt</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+
     <name>Pictet Maven Mojo</name>
     <url>http://maven.apache.org</url>
 
@@ -33,6 +114,11 @@
             <artifactId>maven-project</artifactId>
             <version>2.2.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.jdom</groupId>
+            <artifactId>jdom2</artifactId>
+            <version>[2.0.0,)</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -48,9 +134,9 @@
             </configuration>
         </plugin>
         <plugin>
-          <groupId>com.safits</groupId>
-          <artifactId>compilepathsetter-maven-plugin</artifactId>
-          <version>1.0.0</version>
+            <groupId>com.safits</groupId>
+            <artifactId>pictet-maven-plugin</artifactId>
+            <version>1.0.0</version>
         </plugin>
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
