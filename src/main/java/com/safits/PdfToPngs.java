@@ -52,6 +52,23 @@ extends AbstractMojo {
     	if (!pdfFile.exists() || !pdfFile.isFile() || !pdfFile.canRead())
     		throw new MojoExecutionException(this.pdf + " is not a readable PDF file");
 
+    	//check the presence of the indicated output file
+		this.outputFile = new File(this.pngs);
+		if (this.outputFile.exists()) {
+			//that exists. Maybe we don't have to build it.
+			if (this.outputFile.lastModified() > pdfFile.lastModified()) {
+				//correct. We don't have to do this.
+				getLog().info("Output file " + this.outputFile.getAbsolutePath() + " is up to date.");
+				return;
+			}
+		}
+
+		getLog().info(
+				"Creating "
+				+ this.outputFile.getAbsolutePath()
+				+ " from "
+				+ pdfFile.getAbsolutePath());
+
     	String pdfBasename = pdfFile.getName();
     	if (pdfBasename.endsWith(".pdf"))
     		pdfBasename = pdfBasename.substring(0, pdfBasename.length()-4);
@@ -101,8 +118,6 @@ extends AbstractMojo {
 		if (this.matchingFilenames.isEmpty())
 			throw new MojoExecutionException("Didn't find any matching files");
 		Collections.sort(this.matchingFilenames);
-
-		this.outputFile = new File(this.pngs);
 
 		Display display = Display.getDefault();
 
