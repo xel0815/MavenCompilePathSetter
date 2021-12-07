@@ -3,8 +3,7 @@ package com.safits;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map.Entry;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -14,9 +13,21 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.settings.Settings;
 
+/**
+ * The compile path setter resolves compile dependencies by creating a path which
+ * contains all jars found in the RCP resources, both common and OS specific.
+ *
+ * @author Friedrich Gesell
+ *         friedrich.gesell@safits.be
+ *
+ */
 @Mojo( name = "set-compile-path", defaultPhase = LifecyclePhase.GENERATE_SOURCES, requiresProject = true, threadSafe = true )
 public class CompilePathSetter
 extends AbstractMojo {
+
+	public static final String REPOSITORY_RESOLUTIONS = "repository.resolutions";
+
+	public static final String SEPARATOR = "=";
 
 	@Parameter( defaultValue = "${project}", readonly = true, required = true )
     private MavenProject project;
@@ -24,71 +35,80 @@ extends AbstractMojo {
     @Parameter( defaultValue = "${settings}", readonly = true )
     private Settings settings;
 
-    @Parameter( name = "compile-dependencies", readonly = true)
-    private Dependency[] compileDependencies;
+    @Parameter( name = "os-name", required = false)
+    private String osName;
 
-	public static class Dependency {
-		String groupId;
-		String artifact;
-		String version;
-	}
+    @Parameter( name = "repository-dependencies", readonly = true)
+    private Dependency[] repositoryDependencies;
 
-	final Map<Dependency,File> dependencyMapping = new HashMap<>();
-
-	private int[] lowerVersion;
-	private int[] upperVersion;
-	private boolean lowerBoundIncluded;
-	private boolean upperBoundIncluded;
-
-	private Pattern jarTestPattern;
+    public static class Dependency {
+    	String groupId;
+    	String artifactId;
+    	String version;
+    }
 
     @Override
 	public void execute()
 	throws MojoExecutionException {
-    	if (this.compileDependencies == null || this.compileDependencies.length == 0)
-    		throw new MojoExecutionException("The dependencies are missing");
-    	if (this.compileDependencies.length == 1)
-        	getLog().info("There is 1 dependency:");
-    	else
-    		getLog().info("There are " + this.compileDependencies.length + " dependencies:");
-    	for (Dependency compileDependency: this.compileDependencies) {
-    		getLog().info("-- "
-		+ compileDependency.groupId
-		+ " -- "
-    	+ compileDependency.artifact
-    	+ " -- "
-    	+ compileDependency.version);
+
+    	if (this.osName == null)
+    		this.osName = System.getProperty("os.name").toLowerCase();
+    	getLog().info("Building for " + this.osName);
+
+    	File commonPluginResourceDirectory = new File("resources/rcp/common/plugins");
+    	if (!commonPluginResourceDirectory.isDirectory())
+    		throw new MojoExecutionException("Cannot find " + commonPluginResourceDirectory.getAbsolutePath());
+
+    	File osSpecificResourceDirectory = new File("resources/rcp/" + this.osName);
+    	if (!osSpecificResourceDirectory.isDirectory())
+    		throw new MojoExecutionException("Cannot find " + osSpecificResourceDirectory.getAbsolutePath());
+
+    	if (this.repositoryDependencies == null)
+    		getLog().info("No repository dependencies");
+    	else {
+    		getLog().info("Repository dependencies[" + this.repositoryDependencies.length + "]");
+    		for (Dependency dependency: this.repositoryDependencies) {
+    			getLog().info("-- groupId    : " + dependency.groupId);
+    			getLog().info("-- artifactId : " + dependency.artifactId);
+    			getLog().info("-- version    : " + dependency.version);
+    		}
     	}
 
-    	for (Dependency dependency: this.compileDependencies) {
-    		lookForSuitableJars(dependency);
+    	Map<String,File> repositoryDependencies = resolveRepositoryDependencies();
+    	if (repositoryDependencies != null) {
+    		StringBuilder resolverBuilder = null;
+    		for (Entry<String,File> entry: repositoryDependencies.entrySet()) {
+    			if (resolverBuilder == null)
+    				resolverBuilder = new StringBuilder();
+    			else
+    				resolverBuilder.append(File.pathSeparator);
+    			resolverBuilder.append(entry.getKey());
+    			resolverBuilder.append(SEPARATOR);
+    			resolverBuilder.append(entry.getValue().getAbsolutePath());
+    		}
+
+    		if (resolverBuilder != null) {
+    			getLog().info("Resolver: " + resolverBuilder.toString());
+    			this.project.getProperties().setProperty(
+    					REPOSITORY_RESOLUTIONS,
+    					resolverBuilder.toString());
+    		}
     	}
 
-    	getLog().info("The compile dependencies are resolved as follows:");
-    	StringBuilder compilePathBuilder = null;
-    	for (Dependency dependency: this.compileDependencies) {
-    		if (!this.dependencyMapping.containsKey(dependency))
-    			throw new MojoExecutionException("Could not find a suitable jar for "
-    					+ dependency.groupId
-    					+ " -- "
-    					+ dependency.artifact);
-    		File jarFile = this.dependencyMapping.get(dependency);
-    		if (compilePathBuilder == null)
-    			compilePathBuilder = new StringBuilder();
-    		else
-    			compilePathBuilder.append(File.pathSeparator);
-    		compilePathBuilder.append(jarFile.getAbsolutePath());
-    		getLog().info("-- "
-    				+ dependency.groupId
-					+ " -- "
-					+ dependency.artifact
-					+ " -- "
-					+ dependency.version);
-    		getLog().info("   "
-    				+ jarFile.getAbsolutePath());
+    	StringBuilder compilePathStringBuilder = null;
+    	if (repositoryDependencies != null) {
+    		for (Entry<String,File> entry: repositoryDependencies.entrySet()) {
+    			if (compilePathStringBuilder == null)
+    				compilePathStringBuilder = new StringBuilder();
+    			else
+    				compilePathStringBuilder.append(File.pathSeparator);
+    			compilePathStringBuilder.append(entry.getValue().getAbsolutePath());
+    		}
     	}
 
-    	String compileClassPath = compilePathBuilder.toString();
+    	compilePathStringBuilder = addAllJars(compilePathStringBuilder, commonPluginResourceDirectory);
+    	compilePathStringBuilder = addAllJars(compilePathStringBuilder, osSpecificResourceDirectory);
+    	String compileClassPath = compilePathStringBuilder.toString();
 
     	getLog().info("Compile class path is:");
     	getLog().info(compileClassPath);
@@ -99,190 +119,70 @@ extends AbstractMojo {
 
     }
 
-    /** the pattern for one explicit version of maximum three groups */
-    static final Pattern oneVersionPattern = Pattern.compile(
-    		"[0-9]+(\\.[0-9]+(\\.[0-9]+)?)?");
+    /**
+     * Resolve the repository dependencies
+     * @return a map which maps the artifact name to the file
+     */
+    private Map<String,File> resolveRepositoryDependencies()
+    throws MojoExecutionException {
+    	Map<String,File> map = new HashMap<>();
+    	if (this.repositoryDependencies == null || this.repositoryDependencies.length == 0)
+    		return map;
+    	for (Dependency dependency: this.repositoryDependencies) {
+    		File groupIdDirectory = new File(
+    				this.settings.getLocalRepository()
+    				+ File.separator
+    				+ dependency.groupId.replaceAll("\\.", File.separator));
+    		if (!groupIdDirectory.isDirectory())
+    			throw new MojoExecutionException(
+    					"Cannot find repository dependency directory "
+    							+ groupIdDirectory.getAbsolutePath());
+    		File artifactDirectory = new File(groupIdDirectory, dependency.artifactId);
+    		if (!artifactDirectory.isDirectory())
+    			throw new MojoExecutionException(
+    					"Cannot find repository dependency directory "
+    							+ artifactDirectory.getAbsolutePath());
+    		File versionedDirectory = new File(artifactDirectory, dependency.version);
+    		if (!versionedDirectory.isDirectory())
+    			throw new MojoExecutionException(
+    					"Cannot find repository dependency directory "
+    							+ versionedDirectory.getAbsolutePath());
+    		File dependencyJar = new File(
+    				versionedDirectory,
+    				dependency.artifactId
+    				+ "-"
+    				+ dependency.version
+    				+ ".jar");
+    		if (!dependencyJar.isFile())
+    			throw new MojoExecutionException(
+    					"Cannot find repository dependency "
+    							+ dependencyJar.getAbsolutePath());
+    		getLog().info("-- Resolved with " + dependencyJar.getAbsolutePath());
+    		map.put(dependency.artifactId, dependencyJar);
+    	}
+    	return map;
+    }
 
-	private void lookForSuitableJars(Dependency dependency)
-	throws MojoExecutionException {
-		Matcher matcher = oneVersionPattern.matcher(dependency.version);
-		if (matcher.matches()) {
-			//single version
-			this.lowerVersion = splitVersion(dependency.version);
-			this.upperVersion = this.lowerVersion;
-			this.lowerBoundIncluded = this.upperBoundIncluded = true;
-		}
-		else {
-			//not an explicit version. Must be a range.
-			boolean lowerOpen = dependency.version.startsWith("(");
-			boolean lowerClosed = dependency.version.startsWith("[");
-			boolean upperOpen = dependency.version.endsWith(")");
-			boolean upperClosed = dependency.version.endsWith("]");
-			if (!lowerOpen && !lowerClosed)
-				throwIllegalVersion(dependency);
-			if (!upperOpen && !upperClosed)
-				throwIllegalVersion(dependency);
-			this.lowerBoundIncluded = lowerClosed;
-			this.upperBoundIncluded = upperClosed;
-			String[] lowerGroups;
-			String[] upperGroups;
-			String versionProper = dependency.version.substring(
-					1,
-					dependency.version.length()-1);
-			if (versionProper.startsWith(",")) {
-				//there is no lower bound. Create as many 0's as we have groups.
-				upperGroups = versionProper.substring(1).split("\\.");
-				versionProper = concatenateDotted("0", upperGroups.length) + versionProper;
-			}
-			if (versionProper.endsWith(",")) {
-				//there is no upper bound. Create as many Integer.MAX_VALUEs as we have groups.
-				lowerGroups = versionProper.split("\\.");	//never mind the comma
-				versionProper = versionProper + concatenateDotted(
-						Integer.toString(Integer.MAX_VALUE), lowerGroups.length);
-			}
-			String[] bounds = versionProper.split(",");
-			if (bounds.length != 2)
-				throwIllegalVersion(dependency);
-			lowerGroups = bounds[0].split("\\.");
-			upperGroups = bounds[1].split("\\.");
-			if (lowerGroups.length != upperGroups.length)
-				throwIllegalVersion(dependency);
-			this.lowerVersion = new int[lowerGroups.length];
-			this.upperVersion = new int[upperGroups.length];
-			for (int i=0; i<this.lowerVersion.length; i++) {
-				this.lowerVersion[i] = Integer.parseInt(lowerGroups[i]);
-				this.upperVersion[i] = Integer.parseInt(upperGroups[i]);
-			}
-		}
-		String dependencyRootDirectoryName = this.settings.getLocalRepository()
-				+ File.separator
-				+ dependency.groupId.replaceAll("\\.", File.separator)
-				+ File.separator
-				+ dependency.artifact;
-		File dependencyRootDirectory = new File(dependencyRootDirectoryName);
-		if (!dependencyRootDirectory.isDirectory())
-			throw new MojoExecutionException("Cannot find the dependency root directory for "
-					+ dependency.groupId
-					+ " / "
-					+ dependency.artifact);
-		StringBuilder stringBuilder = null;
-		for (int group = 0; group < this.lowerVersion.length; group++) {
-			if (stringBuilder == null)
-				stringBuilder = new StringBuilder();
-			else
-				stringBuilder.append("\\.");
-			stringBuilder.append("[0-9]+");
-		}
-		this.jarTestPattern = Pattern.compile(
-				dependency.artifact
-				+ "-("
-				+ stringBuilder.toString()
-				+ ")(.*)\\.jar");
-		scanDirectory(dependency, dependencyRootDirectory);
-	}
-
-	private int[] splitVersion(String version) {
-		String[] parts = version.split("\\.");
-		int[] split = new int[parts.length];
-		for (int i=0; i<parts.length; i++) {
-			split[i] = Integer.parseInt(parts[i]);
-		}
-		return split;
-	}
-
-	private void throwIllegalVersion(Dependency dependency)
-	throws MojoExecutionException {
-		throw new MojoExecutionException(
-				"Version "
-				+ dependency.version
-				+ " is not conform to rules");
-	}
-
-	/**
-	 * Create a dotted string with a given number of groups
-	 * @param string
-	 * @param groups
-	 * @return
-	 */
-	private String concatenateDotted(String string, int groups) {
-		StringBuilder groupBuilder = null;
-		for (int group = 0; group < groups; group++) {
-			if (groupBuilder == null)
-				groupBuilder = new StringBuilder();
-			else
-				groupBuilder.append(".");
-			groupBuilder.append(string);
-		}
-		return groupBuilder.toString();
-	}
-
-	private void scanDirectory(Dependency dependency, File directory)
-	throws MojoExecutionException {
-		for (File file: directory.listFiles()) {
-			if (file.isHidden())
-				continue;
-			if (file.isDirectory()) {
-				scanDirectory(dependency, file);
-				continue;
-			}
-			if (file.getName().endsWith(".jar")) {
-				considerJar(dependency, file);
-				continue;
-			}
-		}
-	}
-
-	private void considerJar(Dependency dependency, File jar)
-	throws MojoExecutionException {
-		Matcher matcher = this.jarTestPattern.matcher(jar.getName());
-		if (!matcher.matches()) {
-			return;
-		}
-		int[] versionParts = splitVersion(matcher.group(1));
-		int lowerTest = compareVersion(this.lowerVersion, versionParts);
-		if (lowerTest > 0)
-			return;
-		if (lowerTest == 0 && !this.lowerBoundIncluded)
-			return;
-		//lower test passes
-		int upperTest = compareVersion(versionParts, this.upperVersion);
-		if (upperTest > 0)
-			return;
-		if (upperTest == 0 && !this.upperBoundIncluded)
-			return;
-		//JAR is fully eligible
-		if (this.dependencyMapping.containsKey(dependency)) {
-			//there is already a selected JAR.
-			//Let's see whether this one has a higher version or a higher time stamp.
-			String currentBestName = this.dependencyMapping.get(dependency).getName();
-			matcher = this.jarTestPattern.matcher(currentBestName);
-			matcher.matches();	//or it would never have gotten into the map
-			int[] currentBestVersion = splitVersion(matcher.group(1));
-			if (compareVersion(currentBestVersion, versionParts) >= 0)
-				//current one is equal or better. Don't overwrite.
-				return;
-		}
-		this.dependencyMapping.put(dependency, jar);
-	}
-
-	/**
-	 * Compare a version against a given limit
-	 * @param testing
-	 * @param limit
-	 * @return -1 if testing<limit, 0 if testing==limit, +1 if testing>limit
-	 */
-	private int compareVersion(int[] testing, int[] limit)
-	throws MojoExecutionException {
-		if (testing.length != limit.length)
-			throw new MojoExecutionException("Version length incompatibility");
-		for (int i=0; i<testing.length; i++) {
-			if (testing[i] < limit[i])
-				return -1;
-			if (testing[i] > limit[i])
-				return +1;
-		}
-		//absolutely equal
-		return 0;
-	}
+    /**
+     * Recursively add all JARs of a given directory to the string builder.
+     * Create such a string builder if necessary.
+     * @param stringBuilder to what to add. Can be null -> create it
+     * @param directory
+     */
+    private StringBuilder addAllJars(StringBuilder stringBuilder, File directory) {
+    	for (File file: directory.listFiles()) {
+    		if (file.isDirectory()) {
+    			stringBuilder = addAllJars(stringBuilder, file);
+    		}
+    		else if (file.getName().endsWith(".jar")) {
+    			if (stringBuilder == null)
+    				stringBuilder = new StringBuilder();
+    			else
+    				stringBuilder.append(File.pathSeparator);
+    			stringBuilder.append(file.getAbsolutePath());
+    		}
+    	}
+    	return stringBuilder;
+    }
 
 }
