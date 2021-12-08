@@ -43,7 +43,7 @@ extends AbstractMojo {
     @Parameter( name = "resources", required = false)
     private String[] resources;
 
-    private File exportDirectory;
+    private File pictetDirectory;
 
     private File versionDirectory;
 
@@ -73,7 +73,7 @@ extends AbstractMojo {
     	getRepositoryResolutions();
     	linkResourceDirectories();
     	parseProductFile();
-    	createExportDirectory();
+    	createPictetDirectory();
     	createVersionDirectory();
     	createConfigurationDirectory();
     	copyConfigIni();
@@ -168,31 +168,31 @@ extends AbstractMojo {
     }
 
 	/**
-     * Create a directory 'export' in the project's base directory
+     * Create the pictet export directory in the project's base directory
      * @throws MojoExecutionException
      */
-	private void createExportDirectory()
+	private void createPictetDirectory()
 	throws MojoExecutionException {
-		this.exportDirectory = new File(this.project.getBasedir(), "export");
-		if (this.exportDirectory.exists()) {
-			if (this.exportDirectory.isDirectory())
+		this.pictetDirectory = new File(this.project.getBasedir(), "pictet");
+		if (this.pictetDirectory.exists()) {
+			if (this.pictetDirectory.isDirectory())
 				//all is well
 				return;
-			throw new MojoExecutionException("File 'export' exists, but is not a directory");
+			throw new MojoExecutionException("File 'pictet' exists, but is not a directory");
 		}
-		if (!this.exportDirectory.mkdir())
-			throw new MojoExecutionException("Attempt to create directory 'export' failed");
-		getLog().info("Directory export created");
+		if (!this.pictetDirectory.mkdir())
+			throw new MojoExecutionException("Attempt to create pictet directory failed");
+		getLog().info("Pictet directory created");
 	}
 
 	/**
-	 * Create a version directory in export
+	 * Create a version directory in the pictet directory
 	 */
 	private void createVersionDirectory()
 	throws MojoExecutionException {
 		String version = this.productElement.getAttributeValue("version")
 				.replaceAll("\\.qualifier", "");
-		this.versionDirectory = new File(this.exportDirectory, version);
+		this.versionDirectory = new File(this.pictetDirectory, version);
 		if (this.versionDirectory.exists()) {
 			if (this.versionDirectory.isDirectory())
 				//all is well
@@ -295,17 +295,6 @@ extends AbstractMojo {
     		}
     	}
 
-    	//make the target jar available
-    	File targetJar = new File(
-    			"target/"
-    			+ this.project.getArtifactId()
-    			+ "-"
-    			+ this.project.getVersion()
-    			+ ".jar");
-    	if (!targetJar.isFile())
-    		throw new MojoExecutionException("Cannot find " + targetJar.getAbsolutePath());
-    	available.put(this.project.getArtifactId(), targetJar);
-
     	//map the available common plugins and the OS dependent launcher artifacts
     	final Pattern pluginNameAndVersion = Pattern.compile("(.*?)_([0-9]+\\..*\\.jar)");
     	List<File> requiredFiles = new ArrayList<>();
@@ -335,7 +324,11 @@ extends AbstractMojo {
     		osgiBundles.add(pluginElement.getAttributeValue("id"));
     	}
     	Collections.sort(osgiBundles);
+    	String productName = this.productElement.getAttributeValue("name");
     	for (String osgiBundle: osgiBundles) {
+    		if (productName.equals(osgiBundle))
+    			//we don't need that one, the Main JAR Creator has already built it0
+    			continue;
     		File bundleFile = available.get(osgiBundle);
     		if (bundleFile == null)
     			throw new MojoExecutionException("Cannot resolve " + osgiBundle);
