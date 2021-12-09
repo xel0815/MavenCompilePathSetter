@@ -6,12 +6,12 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="/devel/.maven-repository/org/apache/maven/maven-plugin-api/3.8.1/maven-plugin-api-3.8.1.jar"/>
-	<classpathentry kind="lib" path="/devel/eclipse-workspace/SAFITS/Pictet/lib/maven-plugin-annotations-3.6.0.jar"/>
-	<classpathentry kind="lib" path="/devel/.maven-repository/org/apache/maven/maven-project/2.2.1/maven-project-2.2.1.jar"/>
-	<classpathentry kind="lib" path="/devel/eclipse-workspace/SAFITS/Pictet/lib/jdom2-2.0.6.1.jar"/>
-	<classpathentry kind="lib" path="/devel/eclipse-workspace/SAFITS/Pictet/lib/org.eclipse.swt.gtk.linux.x86_64-3.108.0.jar"/>
-	<classpathentry kind="lib" path="/devel/eclipse-workspace/SAFITS/Pictet/lib/maven-settings-3.8.1.jar"/>
-	<classpathentry kind="lib" path="/devel/eclipse-workspace/SAFITS/Pictet/lib/commons-io-2.6.jar"/>
+	<classpathentry kind="lib" path="lib/maven-plugin-api-3.8.1.jar"/>
+	<classpathentry kind="lib" path="lib/maven-plugin-annotations-3.6.0.jar"/>
+	<classpathentry kind="lib" path="lib/maven-project-2.2.1.jar"/>
+	<classpathentry kind="lib" path="lib/jdom2-2.0.6.1.jar"/>
+	<classpathentry kind="lib" path="lib/org.eclipse.swt.gtk.linux.x86_64-3.108.0.jar"/>
+	<classpathentry kind="lib" path="lib/maven-settings-3.8.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-io-2.6.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
