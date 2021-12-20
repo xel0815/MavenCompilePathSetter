@@ -9,7 +9,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
-@Mojo( name = "set-timestamp", defaultPhase = LifecyclePhase.INITIALIZE, requiresProject = true, threadSafe = false )
+@Mojo( name = "set-timestamp", defaultPhase = LifecyclePhase.GENERATE_SOURCES, requiresProject = true, threadSafe = false )
 public class TimeStamp
 extends AbstractMojo {
 
