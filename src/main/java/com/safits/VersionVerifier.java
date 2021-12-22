@@ -49,8 +49,16 @@ extends AbstractMojo {
     		int lineOfOccurrence = 0;
 
     		File file = new File(location.file);
-    		if (!file.exists())
-    			throw new MojoExecutionException("Cannot find file " + location.file);
+    		if (!file.exists()) {
+    			String message = "Cannot find file " + location.file;
+    			if (location.fatal != null && location.fatal) {
+    				throw new MojoExecutionException(message);
+    			}
+    			else {
+    				getLog().warn(message);
+    				return;
+    			}
+    		}
 
     		Pattern pattern = null;
     		try {
