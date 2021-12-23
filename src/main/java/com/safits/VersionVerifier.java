@@ -13,6 +13,13 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
+/**
+ * The Version Verifier checks that files with version identification match the project's version.
+ *
+ * @author Friedrich Gesell
+ *         friedrich.gesell@safits.be
+ *
+ */
 @Mojo( name = "verify-version", defaultPhase = LifecyclePhase.VALIDATE, requiresProject = true, threadSafe = false )
 public class VersionVerifier
 extends AbstractMojo {
@@ -25,9 +32,23 @@ extends AbstractMojo {
     @Parameter( name = "locations", readonly = true)
     private Location[] locations;
 
+    /**
+     * Where shall we look for matching versions?
+     */
     public static class Location {
+
+    	/** the name of the file to compare */
     	String file;
+
+    	/**
+    	 * The regular expression to look for. The first match will be used.
+    	 * If the pattern has one match group, then there must be a full match.
+    	 * If the pattern has two match groups, then the version is described by group(1),
+    	 * but the match will only be tested with group(2).
+    	 * */
     	String pattern;
+
+    	/** If there is a mismatch, then should a warning be issued or should the process be terminated? */
     	Boolean fatal;
     }
 
@@ -79,9 +100,12 @@ extends AbstractMojo {
     				Matcher matcher = pattern.matcher(line);
     				if (matcher.matches()) {
     					String fileVersion = matcher.group(1);
-    					if (projectVersion.equals(fileVersion)) {
+    					String testVersion = matcher.groupCount() == 1?
+    							fileVersion : matcher.group(2);
+    					String comparableProjectVersion = projectVersion.substring(0, testVersion.length());
+    					if (comparableProjectVersion.equals(testVersion)) {
     						lineOfOccurrence = lineNumber;
-    						getLog().info(String.format("Found version %s in %s line %d",
+    						getLog().info(String.format("Found compliant version %s in %s line %d",
     								fileVersion,
     								location.file,
     								lineOfOccurrence));
