@@ -129,10 +129,13 @@ extends AbstractMojo {
     	if (this.repositoryDependencies == null || this.repositoryDependencies.length == 0)
     		return map;
     	for (Dependency dependency: this.repositoryDependencies) {
+    		String groupIdString = dependency.groupId;
+    		while (groupIdString.indexOf('.') > 0)
+    			groupIdString = groupIdString.replace('.', File.separatorChar);
     		File groupIdDirectory = new File(
     				this.settings.getLocalRepository()
     				+ File.separator
-    				+ dependency.groupId.replaceAll("\\.", File.separator));
+    				+ groupIdString);
     		if (!groupIdDirectory.isDirectory())
     			throw new MojoExecutionException(
     					"Cannot find repository dependency directory "
