@@ -34,9 +34,6 @@ extends AbstractMojo {
     @Parameter( defaultValue = "${settings}", readonly = true )
     private Settings settings;
 
-    @Parameter( property = "product", readonly = true )
-    private String product;
-
     @Parameter( name = "resources", required = false)
     private String[] resources;
 
@@ -130,31 +127,13 @@ extends AbstractMojo {
      */
     private void parseProductFile()
     throws MojoExecutionException {
-    	File productFile = null;
-    	if (this.product == null) {
-    		//locate the one and only product file
-    		for (File file: this.project.getBasedir().listFiles()) {
-    			if (!file.isFile())
-    				continue;
-    			if (file.isHidden())
-    				continue;
-    			if (!file.getName().endsWith(".product"))
-    				continue;
-    			//this is a product file
-    			if (productFile != null)
-    				//we already had one
-    				throw new MojoExecutionException("Ambiguous product files");
-    			productFile = file;
-    		}
-    	}
-    	else {
-    		//explicitly given
-    		productFile = new File(this.project.getBasedir(), this.product);
-    		if (!productFile.exists())
-    			throw new MojoExecutionException("Product file " + this.product + " does not exist");
-    		if (!productFile.isFile())
-    			throw new MojoExecutionException("Invalid product file");
-    	}
+    	File productFile = new File(
+    			this.project.getBasedir(),
+    			this.project.getProperties().getProperty("rcp.product"));
+    	if (!productFile.exists())
+    		throw new MojoExecutionException("Product file " + productFile + " does not exist");
+    	if (!productFile.isFile())
+    		throw new MojoExecutionException("Invalid product file");
     	//ready to parse the product file
     	SAXBuilder saxBuilder = new SAXBuilder();
     	Document productDocument;
@@ -335,10 +314,6 @@ extends AbstractMojo {
     	Element pluginsElement = this.productElement.getChild("plugins");
     	List<Element> pluginElements = pluginsElement.getChildren("plugin");
     	for (Element pluginElement: pluginElements) {
-    		String osFilter = pluginElement.getAttributeValue("os");
-    		if (osFilter != null && !osFilter.equalsIgnoreCase(this.osName))
-    			//that one is not eligible on this platform
-    			continue;    		
     		osgiBundles.add(pluginElement.getAttributeValue("id"));
     	}
     	Collections.sort(osgiBundles);

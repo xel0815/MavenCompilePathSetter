@@ -55,7 +55,7 @@ extends AbstractMojo {
     @Override
 	public void execute()
 	throws MojoExecutionException {
-
+    	
     	if (this.locations == null || this.locations.length == 0) {
     		getLog().info("No locations indicated");
     		return;
