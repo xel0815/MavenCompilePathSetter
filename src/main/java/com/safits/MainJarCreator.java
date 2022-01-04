@@ -26,6 +26,9 @@ extends AbstractMojo {
 	@Parameter( name = "classes", required = true )
 	private String classes;
 
+	@Parameter( name = "jarbinary", required = false)
+	private String jarbinary;
+
 	private File pictetDirectory;
 
 	private File versionedPictetDirectory;
@@ -35,11 +38,6 @@ extends AbstractMojo {
     @Override
 	public void execute()
 	throws MojoExecutionException {
-
-    	//Check that we run on Linux
-    	String osName = System.getProperty("os.name");
-    	if (!"linux".equalsIgnoreCase(osName))
-    		throw new MojoExecutionException("Only implemented for Linux, not " + osName);
 
     	//Get the time stamp
     	String timeStamp = this.project.getProperties().getProperty(TimeStamp.TIMESTAMP_PROPERTY);
@@ -94,10 +92,14 @@ extends AbstractMojo {
     	}
 
     	//find the jar binary on the path
+    	getLog().info("Path is " + System.getenv("PATH"));
     	String[] pathComponents = System.getenv("PATH").split(File.pathSeparator);
     	File jarBinary = null;
+    	String jarBinaryName = 
+    			System.getProperty("os.name").toLowerCase().startsWith("windows")?
+    					"jar.exe" : "jar";
     	for (String pathComponent: pathComponents) {
-    		File file = new File(pathComponent + File.separator + "jar");
+    		File file = new File(pathComponent + File.separator + jarBinaryName);
     		if (file.exists() && file.canExecute()) {
     			getLog().info("Found jar in " + pathComponent);
     			jarBinary = file;

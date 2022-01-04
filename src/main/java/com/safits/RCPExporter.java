@@ -37,9 +37,6 @@ extends AbstractMojo {
     @Parameter( property = "product", readonly = true )
     private String product;
 
-    @Parameter( name = "os-name", required = false)
-    private String osName;
-
     @Parameter( name = "resources", required = false)
     private String[] resources;
 
@@ -65,11 +62,11 @@ extends AbstractMojo {
 
 	private Map<String,File> repositoryResolutions;
 
+	private String osName = System.getProperty("os.name");
+	
     @Override
 	public void execute()
 	throws MojoExecutionException {
-    	if (this.osName == null)
-    		this.osName = System.getProperty("os.name").toLowerCase();
     	getRepositoryResolutions();
     	linkResourceDirectories();
     	parseProductFile();
@@ -83,6 +80,15 @@ extends AbstractMojo {
     	copyResources();
     }
 
+    /**
+     * Is this MS Windows?
+     * @return true if the system property indicates it
+     */
+    private boolean thisIsMSWindows() {
+    	return this.osName.toLowerCase().startsWith("windows");
+    }
+    
+    
     /**
      * The CompilePathSetter may have resolved dependencies and then deposited its resolutions
      * in a project property. Let's look for that property and see what we can resolve through the repository.
@@ -112,9 +118,11 @@ extends AbstractMojo {
     	this.resourceRcpDirectory = new File(this.resourceDirectory, "rcp");
     	if (!this.resourceRcpDirectory.isDirectory())
     		throw new MojoExecutionException("Cannot find resource RCP directory");
-    	this.osSpecificResourceRcpDirectory = new File(this.resourceRcpDirectory, this.osName);
+    	this.osSpecificResourceRcpDirectory = new File(this.resourceRcpDirectory,
+    			this.osName.toLowerCase());
     	if (!this.osSpecificResourceRcpDirectory.isDirectory())
-    		throw new MojoExecutionException("Cannot find OS specific resource RCP directory for " + this.osName);
+    		throw new MojoExecutionException("Cannot find OS specific resource RCP directory for " + 
+    				this.osName);
 	}
 
 	/**
@@ -244,10 +252,12 @@ extends AbstractMojo {
      */
     private void copyConfigIni()
     throws MojoExecutionException {
-    	File resourceRcpOsDirectory = new File(this.resourceRcpDirectory, this.osName);
+    	File resourceRcpOsDirectory = new File(this.resourceRcpDirectory, 
+    			this.osName.toLowerCase());
     	File srcConfigIni = new File(resourceRcpOsDirectory, "config.ini");
     	if (!srcConfigIni.isFile())
-    		throw new MojoExecutionException("Cannot find config.ini resource for target OS '" + this.osName + "'");
+    		throw new MojoExecutionException("Cannot find config.ini resource for target OS '" + 
+    				this.osName + "'");
     	File dstConfigIni = new File(this.configurationDirectory, "config.ini");
     	copyFile(srcConfigIni, dstConfigIni);
     	getLog().info("config.ini created");
@@ -278,7 +288,11 @@ extends AbstractMojo {
     	File launchFile = new File(this.osSpecificResourceRcpDirectory, "launcher-executable");
     	if (!launchFile.isFile())
     		throw new MojoExecutionException("Cannot find " + launchFile.getAbsolutePath());
-    	File copiedLauncher = copyFile(launchFile, new File(this.versionDirectory, this.launcherName));
+    	File copiedLauncher = copyFile(launchFile, new File(
+    			this.versionDirectory, 
+    			thisIsMSWindows()?
+    					this.launcherName + ".exe" :
+    						this.launcherName));
     	copiedLauncher.setExecutable(true);
     }
 
@@ -327,7 +341,7 @@ extends AbstractMojo {
     	String productName = this.productElement.getAttributeValue("name");
     	for (String osgiBundle: osgiBundles) {
     		if (productName.equals(osgiBundle))
-    			//we don't need that one, the Main JAR Creator has already built it0
+    			//we don't need that one, the Main JAR Creator has already built it
     			continue;
     		File bundleFile = available.get(osgiBundle);
     		if (bundleFile == null)

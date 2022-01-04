@@ -43,9 +43,6 @@ extends AbstractMojo {
     @Override
 	public void execute()
 	throws MojoExecutionException {
-    	String osName = System.getProperty("os.name");
-    	if (!"linux".equalsIgnoreCase(osName))
-    		throw new MojoExecutionException("Only implemented for Linux, not " + osName);
 
     	//check the presence of the indicated PDF
     	File pdfFile = new File(this.project.getBasedir(), this.pdf);
@@ -62,6 +59,10 @@ extends AbstractMojo {
 				return;
 			}
 		}
+
+    	String osName = System.getProperty("os.name");
+    	if (!"linux".equalsIgnoreCase(osName)) 
+    		throw new MojoExecutionException("Build required, but only implemented for Linux, not " + osName);
 
 		getLog().info(
 				"Creating "
