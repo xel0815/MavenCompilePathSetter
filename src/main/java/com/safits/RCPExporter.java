@@ -335,6 +335,10 @@ extends AbstractMojo {
     	Element pluginsElement = this.productElement.getChild("plugins");
     	List<Element> pluginElements = pluginsElement.getChildren("plugin");
     	for (Element pluginElement: pluginElements) {
+    		String osFilter = pluginElement.getAttributeValue("os");
+    		if (osFilter != null && !osFilter.equalsIgnoreCase(this.osName))
+    			//that one is not eligible on this platform
+    			continue;    		
     		osgiBundles.add(pluginElement.getAttributeValue("id"));
     	}
     	Collections.sort(osgiBundles);
