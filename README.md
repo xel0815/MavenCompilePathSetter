@@ -1,5 +1,5 @@
 # Pictet
-Near Tycho, but does not overlap Tycho ;-)
+Pictet is a moon crater near Tycho, but much smaller than Tycho, and the two don't overlap.
 
 # Goals
 '''set-compile-path'''
